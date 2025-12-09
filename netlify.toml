@@ -1,7 +1,28 @@
 [build]
   command = "npm install && npm run build"
   publish = "dist/public"
+  functions = "netlify/functions"
 
+[functions]
+  node_bundler = "esbuild"
+
+# API redirects - proxy /api/* to Netlify Functions
+[[redirects]]
+  from = "/api/health"
+  to = "/.netlify/functions/health"
+  status = 200
+
+[[redirects]]
+  from = "/api/user"
+  to = "/.netlify/functions/get-user"
+  status = 200
+
+[[redirects]]
+  from = "/api/user/create"
+  to = "/.netlify/functions/create-user"
+  status = 200
+
+# SPA fallback - must be last
 [[redirects]]
   from = "/*"
   to = "/index.html"
