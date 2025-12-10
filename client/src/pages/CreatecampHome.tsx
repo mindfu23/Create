@@ -1,10 +1,12 @@
 import { MenuIcon } from "lucide-react";
 import React from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 
 const sections = [
   {
     label: "Journal",
+    path: "/journal",
     image:
       "/figmaAssets/light-bulb-png-transparent-light-bulb-images-927547-1.png",
     imageAlt: "Light bulb png",
@@ -13,6 +15,7 @@ const sections = [
   },
   {
     label: "Projects",
+    path: "/projects",
     image: "/figmaAssets/bullseye-586412-1.png",
     imageAlt: "Bullseye",
     imageClass: "w-[136px] h-[136px]",
@@ -29,6 +32,8 @@ const todoItems = [
 ];
 
 export const CreatecampHome = (): JSX.Element => {
+  const [, setLocation] = useLocation();
+
   return (
     <div className="bg-black w-full min-w-[375px] min-h-screen flex flex-col">
       <header className="w-full h-[78px] bg-[#f3c053] flex items-center justify-center relative">
@@ -45,7 +50,10 @@ export const CreatecampHome = (): JSX.Element => {
               <h2 className="[font-family:'Dangrek',Helvetica] font-normal text-[#93b747] text-2xl tracking-[0] leading-[normal] mb-4">
                 {section.label}
               </h2>
-              <Card className="w-full h-[299px] bg-white rounded-[15px] border-0">
+              <Card 
+                onClick={() => setLocation(section.path)}
+                className="w-full h-[299px] bg-white rounded-[15px] border-0 cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all"
+              >
                 <CardContent className="p-0 flex items-center justify-center h-full">
                   <img
                     className={`${section.imageClass} object-cover ${section.containerClass}`}
@@ -62,7 +70,10 @@ export const CreatecampHome = (): JSX.Element => {
           <h2 className="[font-family:'Dangrek',Helvetica] font-normal text-[#93b747] text-2xl tracking-[0] leading-[normal] mb-4">
             To Do
           </h2>
-          <Card className="w-[259px] h-40 bg-white rounded-[15px] border-0">
+          <Card 
+            onClick={() => setLocation("/todo")}
+            className="w-[259px] h-40 bg-white rounded-[15px] border-0 cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all"
+          >
             <CardContent className="p-4 flex items-center justify-center h-full">
               <img
                 className="w-[181px] h-[127px] object-cover"
@@ -77,11 +88,16 @@ export const CreatecampHome = (): JSX.Element => {
           <h2 className="[font-family:'Dangrek',Helvetica] font-normal text-[#93b747] text-2xl tracking-[0] leading-[normal] mb-4">
             Share
           </h2>
-          <img
-            className="w-[79px] h-[58px]"
-            alt="Group"
-            src="/figmaAssets/group-12.png"
-          />
+          <button
+            onClick={() => setLocation("/share")}
+            className="hover:scale-110 transition-transform"
+          >
+            <img
+              className="w-[79px] h-[58px]"
+              alt="Group"
+              src="/figmaAssets/group-12.png"
+            />
+          </button>
         </section>
       </main>
     </div>
