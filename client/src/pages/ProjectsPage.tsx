@@ -1,6 +1,6 @@
-import { ArrowLeft, Plus, Check, Circle, Trash2, RefreshCw, Cloud, CloudOff, Save } from "lucide-react";
+import { ArrowLeft, Plus, Check, Circle, Trash2, RefreshCw, Cloud, CloudOff, Save, ListTodo } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useProjectStorage } from "@/hooks/useProjectStorage";
@@ -9,7 +9,13 @@ import type { Project } from "@/lib/projectStorage";
 
 export const ProjectsPage = (): JSX.Element => {
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const { toast } = useToast();
+  
+  // Parse URL params for special navigation
+  const urlParams = new URLSearchParams(searchString);
+  const createNewParam = urlParams.get('createNew');
+  const returnTo = urlParams.get('returnTo');
   
   // Get userId from localStorage (shared with journal)
   const [userId, setUserId] = useState<string | null>(null);
@@ -48,6 +54,15 @@ export const ProjectsPage = (): JSX.Element => {
   // User setup form
   const [showUserSetup, setShowUserSetup] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  
+  // Auto-open create form if createNew param is present
+  useEffect(() => {
+    if (createNewParam === 'true' && !isLoading) {
+      setIsCreating(true);
+      // Clear the URL param
+      setLocation('/projects', { replace: true });
+    }
+  }, [createNewParam, isLoading, setLocation]);
 
   // Update selected project when projects change
   useEffect(() => {
@@ -97,7 +112,16 @@ export const ProjectsPage = (): JSX.Element => {
       });
       setNewProject({ name: "", description: "" });
       setIsCreating(false);
-      setSelectedProject(result);
+      
+      // Check if we need to return to todo page
+      const pendingTodoUpdate = localStorage.getItem('pending_todo_project_update');
+      if (pendingTodoUpdate || returnTo === 'todo') {
+        // Return to todo page with the new project ID
+        localStorage.removeItem('pending_todo_project_update');
+        setLocation(`/todo?created=${result.id}`);
+      } else {
+        setSelectedProject(result);
+      }
     }
   };
 
@@ -391,6 +415,16 @@ export const ProjectsPage = (): JSX.Element => {
           <p className="text-gray-500 text-sm text-center">
             Last updated: {new Date(selectedProject.updatedAt).toLocaleString()}
           </p>
+
+          {/* Create a task button */}
+          <Button
+            onClick={() => setLocation(`/todo?created=${selectedProject.id}`)}
+            variant="outline"
+            className="w-full text-white border-white hover:bg-white hover:text-black"
+          >
+            <ListTodo className="w-4 h-4 mr-2" />
+            Create a Task for this Project
+          </Button>
         </main>
       </div>
     );

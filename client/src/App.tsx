@@ -9,6 +9,7 @@ import { CreatecampHome } from "@/pages/CreatecampHome";
 import { JournalPage } from "@/pages/JournalPage";
 import { ProjectsPage } from "@/pages/ProjectsPage";
 import { TodoPage } from "@/pages/TodoPage";
+import { CompletedTasksPage } from "@/pages/CompletedTasksPage";
 import { SharePage } from "@/pages/SharePage";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/journal" component={JournalPage} />
       <Route path="/projects" component={ProjectsPage} />
       <Route path="/todo" component={TodoPage} />
+      <Route path="/completed-tasks" component={CompletedTasksPage} />
       <Route path="/share" component={SharePage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />

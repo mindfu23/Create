@@ -28,6 +28,7 @@ const menuItems = [
   { label: "Journal", path: "/journal" },
   { label: "Projects", path: "/projects" },
   { label: "To Do", path: "/todo" },
+  { label: "Completed Tasks", path: "/completed-tasks" },
   { label: "Share", path: "/share" },
 ];
 
