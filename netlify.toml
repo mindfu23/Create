@@ -22,6 +22,11 @@
   to = "/.netlify/functions/create-user"
   status = 200
 
+[[redirects]]
+  from = "/api/journal-sync"
+  to = "/.netlify/functions/journal-sync"
+  status = 200
+
 # SPA fallback - must be last
 [[redirects]]
   from = "/*"
