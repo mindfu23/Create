@@ -1,186 +1,234 @@
-import { ArrowLeft, Plus, Check, Circle } from "lucide-react";
-import React, { useState } from "react";
+import { ArrowLeft, Plus, Check, Circle, Trash2, RefreshCw, Cloud, CloudOff, Save } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  progress: number;
-  tasks: { id: string; text: string; done: boolean }[];
-}
+import { useProjectStorage } from "@/hooks/useProjectStorage";
+import { useToast } from "@/hooks/use-toast";
+import type { Project } from "@/lib/projectStorage";
 
 export const ProjectsPage = (): JSX.Element => {
   const [, setLocation] = useLocation();
-  const [projects, setProjects] = useState<Project[]>([
-    {
-      id: "1",
-      name: "My First Project",
-      description: "A creative project to get started",
-      progress: 25,
-      tasks: [
-        { id: "1", text: "Brainstorm ideas", done: true },
-        { id: "2", text: "Create outline", done: false },
-        { id: "3", text: "Build prototype", done: false },
-        { id: "4", text: "Share with friends", done: false },
-      ],
-    },
-  ]);
+  const { toast } = useToast();
+  
+  // Get userId from localStorage (shared with journal)
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Try to get userId from localStorage
+    const storedUserId = localStorage.getItem('create_user_id');
+    if (storedUserId) {
+      setUserId(storedUserId);
+    }
+  }, []);
+
+  // Storage hook
+  const {
+    projects,
+    isLoading,
+    syncStatus,
+    error,
+    createProject,
+    updateProject,
+    removeProject,
+    addTask,
+    toggleTask,
+    deleteTask,
+    syncWithServer,
+  } = useProjectStorage({ autoSync: true, syncInterval: 30000, userId: userId || undefined });
+
+  // Local state
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newProject, setNewProject] = useState({ name: "", description: "" });
+  const [newTaskText, setNewTaskText] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", description: "" });
 
-  const handleCreateProject = () => {
-    if (newProject.name) {
-      const project: Project = {
-        id: Date.now().toString(),
-        name: newProject.name,
-        description: newProject.description,
-        progress: 0,
-        tasks: [],
-      };
-      setProjects([project, ...projects]);
+  // User setup form
+  const [showUserSetup, setShowUserSetup] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+
+  // Update selected project when projects change
+  useEffect(() => {
+    if (selectedProject) {
+      const updated = projects.find(p => p.id === selectedProject.id);
+      if (updated) {
+        setSelectedProject(updated);
+      }
+    }
+  }, [projects, selectedProject?.id]);
+
+  // Handle user setup
+  const handleUserSetup = () => {
+    if (!userEmail) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email for syncing",
+        variant: "destructive",
+      });
+      return;
+    }
+    localStorage.setItem('create_user_id', userEmail);
+    setUserId(userEmail);
+    setShowUserSetup(false);
+    toast({
+      title: "Sync Enabled",
+      description: "Your projects will now sync across devices",
+    });
+  };
+
+  // Handle create project
+  const handleCreateProject = async () => {
+    if (!newProject.name) {
+      toast({
+        title: "Name Required",
+        description: "Please enter a project name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const result = await createProject(newProject.name, newProject.description);
+    if (result) {
+      toast({
+        title: "Project Created",
+        description: "Your project has been saved",
+      });
       setNewProject({ name: "", description: "" });
       setIsCreating(false);
-      setSelectedProject(project);
+      setSelectedProject(result);
     }
   };
 
-  const toggleTask = (projectId: string, taskId: string) => {
-    setProjects(
-      projects.map((p) => {
-        if (p.id === projectId) {
-          const updatedTasks = p.tasks.map((t) =>
-            t.id === taskId ? { ...t, done: !t.done } : t
-          );
-          const doneCount = updatedTasks.filter((t) => t.done).length;
-          const progress =
-            updatedTasks.length > 0
-              ? Math.round((doneCount / updatedTasks.length) * 100)
-              : 0;
-          return { ...p, tasks: updatedTasks, progress };
-        }
-        return p;
-      })
-    );
-    if (selectedProject?.id === projectId) {
-      setSelectedProject((prev) => {
-        if (!prev) return null;
-        const updatedTasks = prev.tasks.map((t) =>
-          t.id === taskId ? { ...t, done: !t.done } : t
-        );
-        const doneCount = updatedTasks.filter((t) => t.done).length;
-        const progress =
-          updatedTasks.length > 0
-            ? Math.round((doneCount / updatedTasks.length) * 100)
-            : 0;
-        return { ...prev, tasks: updatedTasks, progress };
+  // Handle update project
+  const handleUpdateProject = async () => {
+    if (!selectedProject || !editForm.name) return;
+
+    const result = await updateProject(selectedProject.id, {
+      name: editForm.name,
+      description: editForm.description,
+    });
+
+    if (result) {
+      toast({
+        title: "Project Updated",
+        description: "Changes have been saved",
+      });
+      setIsEditing(false);
+    }
+  };
+
+  // Handle delete project
+  const handleDeleteProject = async (id: string) => {
+    const success = await removeProject(id);
+    if (success) {
+      toast({
+        title: "Project Deleted",
+        description: "Project has been removed",
+      });
+      setSelectedProject(null);
+    }
+  };
+
+  // Handle add task
+  const handleAddTask = async () => {
+    if (!selectedProject || !newTaskText.trim()) return;
+
+    const success = await addTask(selectedProject.id, newTaskText);
+    if (success) {
+      setNewTaskText("");
+    }
+  };
+
+  // Handle toggle task
+  const handleToggleTask = async (taskId: string) => {
+    if (!selectedProject) return;
+    await toggleTask(selectedProject.id, taskId);
+  };
+
+  // Handle delete task
+  const handleDeleteTask = async (taskId: string) => {
+    if (!selectedProject) return;
+    await deleteTask(selectedProject.id, taskId);
+  };
+
+  // Handle manual sync
+  const handleSync = async () => {
+    if (!userId) {
+      setShowUserSetup(true);
+      return;
+    }
+    
+    const result = await syncWithServer();
+    if (result.success) {
+      toast({
+        title: "Synced",
+        description: `Pushed: ${result.pushed}, Pulled: ${result.pulled}${result.conflicts ? `, Conflicts: ${result.conflicts}` : ''}`,
+      });
+    } else {
+      toast({
+        title: "Sync Failed",
+        description: "Could not sync with server",
+        variant: "destructive",
       });
     }
   };
 
-  const addTask = (projectId: string, text: string) => {
-    if (!text.trim()) return;
-    const newTask = { id: Date.now().toString(), text, done: false };
-    setProjects(
-      projects.map((p) => {
-        if (p.id === projectId) {
-          const updatedTasks = [...p.tasks, newTask];
-          const doneCount = updatedTasks.filter((t) => t.done).length;
-          const progress =
-            updatedTasks.length > 0
-              ? Math.round((doneCount / updatedTasks.length) * 100)
-              : 0;
-          return { ...p, tasks: updatedTasks, progress };
-        }
-        return p;
-      })
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="bg-black w-full min-w-[375px] min-h-screen flex flex-col items-center justify-center">
+        <RefreshCw className="w-12 h-12 text-[#93b747] animate-spin" />
+        <p className="text-white mt-4">Loading projects...</p>
+      </div>
     );
-    if (selectedProject?.id === projectId) {
-      setSelectedProject((prev) => {
-        if (!prev) return null;
-        const updatedTasks = [...prev.tasks, newTask];
-        const doneCount = updatedTasks.filter((t) => t.done).length;
-        const progress =
-          updatedTasks.length > 0
-            ? Math.round((doneCount / updatedTasks.length) * 100)
-            : 0;
-        return { ...prev, tasks: updatedTasks, progress };
-      });
-    }
-  };
+  }
 
-  const [newTaskText, setNewTaskText] = useState("");
-
-  if (selectedProject) {
+  // User setup modal
+  if (showUserSetup) {
     return (
       <div className="bg-black w-full min-w-[375px] min-h-screen flex flex-col">
         <header className="w-full h-[78px] bg-[#f3c053] flex items-center justify-center relative">
           <button
-            onClick={() => setSelectedProject(null)}
+            onClick={() => setShowUserSetup(false)}
             className="absolute left-4 top-1/2 -translate-y-1/2"
           >
             <ArrowLeft className="w-6 h-6 text-black" />
           </button>
-          <h1 className="[font-family:'Dangrek',Helvetica] font-normal text-black text-2xl text-center tracking-[0] leading-[normal] px-12 truncate">
-            {selectedProject.name}
+          <h1 className="[font-family:'Dangrek',Helvetica] font-normal text-black text-4xl text-center tracking-[0] leading-[normal]">
+            Sync Setup
           </h1>
         </header>
 
-        <main className="flex-1 flex flex-col px-4 pt-6 gap-4">
-          {/* Progress Bar */}
-          <div className="bg-gray-800 rounded-full h-4 overflow-hidden">
-            <div
-              className="bg-[#93b747] h-full transition-all duration-300"
-              style={{ width: `${selectedProject.progress}%` }}
-            />
-          </div>
-          <p className="text-white text-center">{selectedProject.progress}% Complete</p>
+        <main className="flex-1 flex flex-col items-center justify-center px-4 gap-6">
+          <Cloud className="w-16 h-16 text-[#93b747]" />
+          <h2 className="text-white text-2xl [font-family:'Dangrek',Helvetica]">
+            Enable Cloud Sync
+          </h2>
+          <p className="text-gray-400 text-center max-w-xs">
+            Enter your email to sync projects across devices
+          </p>
 
-          {/* Tasks */}
-          <Card className="bg-white rounded-[15px] border-0">
-            <CardContent className="p-4">
-              <h3 className="font-bold mb-4">Tasks</h3>
-              {selectedProject.tasks.map((task) => (
-                <div
-                  key={task.id}
-                  onClick={() => toggleTask(selectedProject.id, task.id)}
-                  className="flex items-center gap-3 py-2 cursor-pointer hover:bg-gray-50 rounded px-2"
-                >
-                  {task.done ? (
-                    <Check className="w-5 h-5 text-[#93b747]" />
-                  ) : (
-                    <Circle className="w-5 h-5 text-gray-400" />
-                  )}
-                  <span className={task.done ? "line-through text-gray-400" : ""}>
-                    {task.text}
-                  </span>
+          <Card className="bg-white rounded-[15px] border-0 w-full max-w-sm">
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={userEmail}
+                    onChange={(e) => setUserEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleUserSetup()}
+                    className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-[#93b747]"
+                  />
                 </div>
-              ))}
-              <div className="flex gap-2 mt-4">
-                <input
-                  type="text"
-                  placeholder="Add a task..."
-                  value={newTaskText}
-                  onChange={(e) => setNewTaskText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      addTask(selectedProject.id, newTaskText);
-                      setNewTaskText("");
-                    }
-                  }}
-                  className="flex-1 p-2 border rounded outline-none"
-                />
                 <Button
-                  onClick={() => {
-                    addTask(selectedProject.id, newTaskText);
-                    setNewTaskText("");
-                  }}
-                  className="bg-[#93b747] hover:bg-[#7a9a3a]"
+                  onClick={handleUserSetup}
+                  className="w-full bg-[#93b747] hover:bg-[#7a9a3a] h-12"
                 >
-                  <Plus className="w-4 h-4" />
+                  Enable Sync
                 </Button>
               </div>
             </CardContent>
@@ -190,6 +238,165 @@ export const ProjectsPage = (): JSX.Element => {
     );
   }
 
+  // Project detail view
+  if (selectedProject) {
+    return (
+      <div className="bg-black w-full min-w-[375px] min-h-screen flex flex-col">
+        <header className="w-full h-[78px] bg-[#f3c053] flex items-center justify-center relative">
+          <button
+            onClick={() => {
+              setSelectedProject(null);
+              setIsEditing(false);
+            }}
+            className="absolute left-4 top-1/2 -translate-y-1/2"
+          >
+            <ArrowLeft className="w-6 h-6 text-black" />
+          </button>
+          <h1 className="[font-family:'Dangrek',Helvetica] font-normal text-black text-2xl text-center tracking-[0] leading-[normal] px-12 truncate">
+            {selectedProject.name}
+          </h1>
+          <button
+            onClick={() => handleDeleteProject(selectedProject.id)}
+            className="absolute right-4 top-1/2 -translate-y-1/2"
+          >
+            <Trash2 className="w-5 h-5 text-black" />
+          </button>
+        </header>
+
+        <main className="flex-1 flex flex-col px-4 pt-6 gap-4 pb-20">
+          {/* Conflict warning */}
+          {selectedProject.id.includes('_conflicted_copy') && (
+            <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg text-sm">
+              ⚠️ This is a conflicted copy. Review and merge with the original.
+            </div>
+          )}
+
+          {/* Progress Bar */}
+          <div className="bg-gray-800 rounded-full h-4 overflow-hidden">
+            <div
+              className="bg-[#93b747] h-full transition-all duration-300"
+              style={{ width: `${selectedProject.progress}%` }}
+            />
+          </div>
+          <p className="text-white text-center">{selectedProject.progress}% Complete</p>
+
+          {/* Project Details */}
+          <Card className="bg-white rounded-[15px] border-0">
+            <CardContent className="p-4">
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full text-xl font-bold mb-2 p-2 border-b border-gray-200 outline-none"
+                  />
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    className="w-full h-20 p-2 outline-none resize-none"
+                    placeholder="Project description..."
+                  />
+                  <div className="flex gap-2 justify-end mt-2">
+                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleUpdateProject} className="bg-[#93b747] hover:bg-[#7a9a3a]">
+                      <Save className="w-4 h-4 mr-2" />
+                      Save
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-bold text-lg">{selectedProject.name}</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditForm({
+                          name: selectedProject.name,
+                          description: selectedProject.description,
+                        });
+                        setIsEditing(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                  {selectedProject.description && (
+                    <p className="text-gray-600 mt-2">{selectedProject.description}</p>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tasks */}
+          <Card className="bg-white rounded-[15px] border-0">
+            <CardContent className="p-4">
+              <h3 className="font-bold mb-4">Tasks</h3>
+              {selectedProject.tasks.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No tasks yet. Add one below!</p>
+              ) : (
+                selectedProject.tasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center gap-3 py-2 group"
+                  >
+                    <button onClick={() => handleToggleTask(task.id)}>
+                      {task.done ? (
+                        <Check className="w-5 h-5 text-[#93b747]" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-gray-400" />
+                      )}
+                    </button>
+                    <span className={`flex-1 ${task.done ? "line-through text-gray-400" : ""}`}>
+                      {task.text}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </button>
+                  </div>
+                ))
+              )}
+              <div className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  placeholder="Add a task..."
+                  value={newTaskText}
+                  onChange={(e) => setNewTaskText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleAddTask();
+                    }
+                  }}
+                  className="flex-1 p-2 border rounded outline-none"
+                />
+                <Button
+                  onClick={handleAddTask}
+                  className="bg-[#93b747] hover:bg-[#7a9a3a]"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Last updated */}
+          <p className="text-gray-500 text-sm text-center">
+            Last updated: {new Date(selectedProject.updatedAt).toLocaleString()}
+          </p>
+        </main>
+      </div>
+    );
+  }
+
+  // Project list view
   return (
     <div className="bg-black w-full min-w-[375px] min-h-screen flex flex-col">
       <header className="w-full h-[78px] bg-[#f3c053] flex items-center justify-center relative">
@@ -202,16 +409,47 @@ export const ProjectsPage = (): JSX.Element => {
         <h1 className="[font-family:'Dangrek',Helvetica] font-normal text-black text-4xl text-center tracking-[0] leading-[normal]">
           Projects
         </h1>
-        <button
-          onClick={() => setIsCreating(true)}
-          className="absolute right-4 top-1/2 -translate-y-1/2"
-        >
-          <Plus className="w-6 h-6 text-black" />
-        </button>
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
+          <button
+            onClick={handleSync}
+            disabled={syncStatus.isSyncing}
+            className="p-1"
+            title="Sync with cloud"
+          >
+            {syncStatus.isSyncing ? (
+              <RefreshCw className="w-5 h-5 text-black animate-spin" />
+            ) : userId && syncStatus.lastSync ? (
+              <Cloud className="w-5 h-5 text-black" />
+            ) : (
+              <CloudOff className="w-5 h-5 text-black" />
+            )}
+          </button>
+          <button
+            onClick={() => setIsCreating(true)}
+            className="p-1"
+          >
+            <Plus className="w-6 h-6 text-black" />
+          </button>
+        </div>
       </header>
 
+      {/* Sync status bar */}
+      {syncStatus.error && (
+        <div className="bg-red-500 text-white text-sm px-4 py-2 text-center">
+          {syncStatus.error}
+        </div>
+      )}
+
       <main className="flex-1 flex flex-col px-4 pt-6 gap-4">
-        {isCreating ? (
+        {/* Error display */}
+        {error && (
+          <div className="bg-red-100 text-red-800 p-3 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {/* Create project form */}
+        {isCreating && (
           <Card className="bg-white rounded-[15px] border-0">
             <CardContent className="p-4">
               <input
@@ -250,9 +488,10 @@ export const ProjectsPage = (): JSX.Element => {
               </div>
             </CardContent>
           </Card>
-        ) : null}
+        )}
 
-        {projects.length === 0 && !isCreating ? (
+        {/* Empty state */}
+        {projects.length === 0 && !isCreating && (
           <div className="flex flex-col items-center justify-center flex-1 text-white">
             <p className="text-lg mb-4">No projects yet</p>
             <Button
@@ -263,29 +502,42 @@ export const ProjectsPage = (): JSX.Element => {
               Start a project
             </Button>
           </div>
-        ) : (
-          projects.map((project) => (
-            <Card
-              key={project.id}
-              onClick={() => setSelectedProject(project)}
-              className="bg-white rounded-[15px] border-0 cursor-pointer hover:shadow-lg transition-shadow"
-            >
-              <CardContent className="p-4">
-                <h3 className="text-lg font-bold text-black">{project.name}</h3>
-                <p className="text-gray-600 mt-1">{project.description}</p>
-                <div className="mt-3 bg-gray-200 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-[#93b747] h-full transition-all duration-300"
-                    style={{ width: `${project.progress}%` }}
-                  />
+        )}
+
+        {/* Project list */}
+        {projects.map((project) => (
+          <Card
+            key={project.id}
+            onClick={() => setSelectedProject(project)}
+            className={`bg-white rounded-[15px] border-0 cursor-pointer hover:shadow-lg transition-shadow ${
+              project.id.includes('_conflicted_copy') ? 'border-2 border-yellow-400' : ''
+            }`}
+          >
+            <CardContent className="p-4">
+              {project.id.includes('_conflicted_copy') && (
+                <div className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded mb-2 inline-block">
+                  ⚠️ Conflicted Copy
                 </div>
-                <p className="text-sm text-gray-500 mt-1">
+              )}
+              <h3 className="text-lg font-bold text-black">{project.name}</h3>
+              <p className="text-gray-600 mt-1">{project.description}</p>
+              <div className="mt-3 bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-[#93b747] h-full transition-all duration-300"
+                  style={{ width: `${project.progress}%` }}
+                />
+              </div>
+              <div className="flex justify-between mt-1">
+                <p className="text-sm text-gray-500">
                   {project.progress}% complete
                 </p>
-              </CardContent>
-            </Card>
-          ))
-        )}
+                <p className="text-sm text-gray-500">
+                  {project.tasks.length} task{project.tasks.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </main>
     </div>
   );

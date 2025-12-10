@@ -27,6 +27,11 @@
   to = "/.netlify/functions/journal-sync"
   status = 200
 
+[[redirects]]
+  from = "/api/project-sync"
+  to = "/.netlify/functions/project-sync"
+  status = 200
+
 # SPA fallback - must be last
 [[redirects]]
   from = "/*"

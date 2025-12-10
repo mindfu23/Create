@@ -4,3 +4,6 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Local notes - do not commit
+ENCRYPTED_JOURNAL_NOTES.md
