@@ -1,5 +1,5 @@
-import { MenuIcon } from "lucide-react";
-import React from "react";
+import { MenuIcon, X } from "lucide-react";
+import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -23,6 +23,14 @@ const sections = [
   },
 ];
 
+const menuItems = [
+  { label: "Home", path: "/" },
+  { label: "Journal", path: "/journal" },
+  { label: "Projects", path: "/projects" },
+  { label: "To Do", path: "/todo" },
+  { label: "Share", path: "/share" },
+];
+
 const todoItems = [
   "Groceries",
   "Grants to fill out",
@@ -33,11 +41,50 @@ const todoItems = [
 
 export const CreatecampHome = (): JSX.Element => {
   const [, setLocation] = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div className="bg-black w-full min-w-[375px] min-h-screen flex flex-col">
+      {/* Slide-out Menu */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div 
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMenuOpen(false)}
+          />
+          <div className="relative w-64 bg-[#f3c053] h-full shadow-xl">
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="absolute right-4 top-4"
+            >
+              <X className="w-6 h-6 text-black" />
+            </button>
+            <nav className="pt-16 px-6">
+              <h2 className="[font-family:'Dangrek',Helvetica] text-black text-2xl mb-6">Menu</h2>
+              {menuItems.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => {
+                    setLocation(item.path);
+                    setMenuOpen(false);
+                  }}
+                  className="block w-full text-left py-3 px-4 text-black text-lg hover:bg-[#e5b347] rounded-lg transition-colors [font-family:'Dangrek',Helvetica]"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+      )}
+
       <header className="w-full h-[78px] bg-[#f3c053] flex items-center justify-center relative">
-        <MenuIcon className="absolute left-[14px] top-[45px] w-6 h-6 text-black" />
+        <button
+          onClick={() => setMenuOpen(true)}
+          className="absolute left-[14px] top-1/2 -translate-y-1/2"
+        >
+          <MenuIcon className="w-6 h-6 text-black" />
+        </button>
         <h1 className="[font-family:'Dangrek',Helvetica] font-normal text-black text-4xl text-center tracking-[0] leading-[normal]">
           Create!
         </h1>
@@ -47,9 +94,12 @@ export const CreatecampHome = (): JSX.Element => {
         <section className="grid grid-cols-2 gap-4 mb-8">
           {sections.map((section, index) => (
             <div key={index} className="flex flex-col items-center">
-              <h2 className="[font-family:'Dangrek',Helvetica] font-normal text-[#93b747] text-2xl tracking-[0] leading-[normal] mb-4">
+              <button
+                onClick={() => setLocation(section.path)}
+                className="[font-family:'Dangrek',Helvetica] font-normal text-[#93b747] text-2xl tracking-[0] leading-[normal] mb-4 hover:text-[#a8cc52] transition-colors cursor-pointer"
+              >
                 {section.label}
-              </h2>
+              </button>
               <Card 
                 onClick={() => setLocation(section.path)}
                 className="w-full h-[299px] bg-white rounded-[15px] border-0 cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all"
@@ -67,9 +117,12 @@ export const CreatecampHome = (): JSX.Element => {
         </section>
 
         <section className="flex flex-col items-center mb-8">
-          <h2 className="[font-family:'Dangrek',Helvetica] font-normal text-[#93b747] text-2xl tracking-[0] leading-[normal] mb-4">
+          <button
+            onClick={() => setLocation("/todo")}
+            className="[font-family:'Dangrek',Helvetica] font-normal text-[#93b747] text-2xl tracking-[0] leading-[normal] mb-4 hover:text-[#a8cc52] transition-colors cursor-pointer"
+          >
             To Do
-          </h2>
+          </button>
           <Card 
             onClick={() => setLocation("/todo")}
             className="w-[259px] h-40 bg-white rounded-[15px] border-0 cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all"
@@ -85,9 +138,12 @@ export const CreatecampHome = (): JSX.Element => {
         </section>
 
         <section className="flex flex-col items-center pb-8">
-          <h2 className="[font-family:'Dangrek',Helvetica] font-normal text-[#93b747] text-2xl tracking-[0] leading-[normal] mb-4">
+          <button
+            onClick={() => setLocation("/share")}
+            className="[font-family:'Dangrek',Helvetica] font-normal text-[#93b747] text-2xl tracking-[0] leading-[normal] mb-4 hover:text-[#a8cc52] transition-colors cursor-pointer"
+          >
             Share
-          </h2>
+          </button>
           <button
             onClick={() => setLocation("/share")}
             className="hover:scale-110 transition-transform"
