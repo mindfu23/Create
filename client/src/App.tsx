@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/AuthContext";
 import NotFound from "@/pages/not-found";
 
 import { CreatecampHome } from "@/pages/CreatecampHome";
@@ -12,6 +13,7 @@ import { TodoPage } from "@/pages/TodoPage";
 import { CompletedTasksPage } from "@/pages/CompletedTasksPage";
 import { SharePage } from "@/pages/SharePage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { AccountPage } from "@/pages/AccountPage";
 import { OAuthCallbackPage } from "@/pages/OAuthCallbackPage";
 import { SketchbookPage } from "@/pages/SketchbookPage";
 
@@ -26,6 +28,7 @@ function Router() {
       <Route path="/completed-tasks" component={CompletedTasksPage} />
       <Route path="/share" component={SharePage} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/account" component={AccountPage} />
       <Route path="/sketchbook" component={SketchbookPage} />
       <Route path="/auth/callback" component={OAuthCallbackPage} />
       {/* Fallback to 404 */}
@@ -37,10 +40,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

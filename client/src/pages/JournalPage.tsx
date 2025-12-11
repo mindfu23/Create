@@ -6,16 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useJournalStorage } from "@/hooks/useJournalStorage";
 import { useCloudJournalSync } from "@/hooks/useCloudJournalSync";
 import { useToast } from "@/hooks/use-toast";
-
-// Helper to get user ID from localStorage
-const getUserId = (): string => {
-  let userId = localStorage.getItem('createcamp_user_id');
-  if (!userId) {
-    userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('createcamp_user_id', userId);
-  }
-  return userId;
-};
+import { useAuth } from "@/contexts/AuthContext";
 
 // Check premium status
 const checkPremiumStatus = (): boolean => {
@@ -28,9 +19,10 @@ const checkPremiumStatus = (): boolean => {
 export const JournalPage = (): JSX.Element => {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, isAuthenticated, requireAuth } = useAuth();
   
   // User info
-  const [userId] = useState(getUserId);
+  const userId = user?.id || 'anonymous';
   const [isPremium] = useState(checkPremiumStatus);
   
   // Storage hook
@@ -103,6 +95,12 @@ export const JournalPage = (): JSX.Element => {
 
   // Handle save new entry
   const handleSave = async () => {
+    // Require authentication to save
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     if (!newEntry.title || !newEntry.content) {
       toast({
         title: "Required Fields",
@@ -125,6 +123,12 @@ export const JournalPage = (): JSX.Element => {
 
   // Handle update entry
   const handleUpdate = async () => {
+    // Require authentication to update
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     if (!editingEntry || !editContent.title || !editContent.content) return;
 
     const result = await updateEntry(editingEntry, editContent);
@@ -140,6 +144,12 @@ export const JournalPage = (): JSX.Element => {
 
   // Handle delete entry
   const handleDelete = async (id: string) => {
+    // Require authentication to delete
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     const success = await removeEntry(id);
     if (success) {
       toast({

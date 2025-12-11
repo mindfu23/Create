@@ -26,6 +26,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { useSketchbookStorage } from '@/hooks/useSketchbookStorage';
 import { SketchCanvas } from '@/components/sketchbook/SketchCanvas';
 import { SketchToolbar } from '@/components/sketchbook/SketchToolbar';
@@ -43,6 +44,7 @@ import { getPageLabel } from '@shared/sketchbook';
 export function SketchbookPage(): JSX.Element {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { isAuthenticated, requireAuth } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Storage hook
@@ -197,6 +199,11 @@ export function SketchbookPage(): JSX.Element {
             break;
           case 's':
             e.preventDefault();
+            // Require authentication to save
+            if (!isAuthenticated) {
+              requireAuth();
+              return;
+            }
             save();
             toast({ title: 'Saved', description: 'Sketchbook saved' });
             break;
@@ -240,6 +247,12 @@ export function SketchbookPage(): JSX.Element {
 
   // Handle creating new sketchbook
   const handleCreateNew = async () => {
+    // Require authentication to create sketchbook
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     if (!newSketchbookName.trim()) {
       toast({ title: 'Error', description: 'Please enter a name', variant: 'destructive' });
       return;
@@ -344,6 +357,12 @@ export function SketchbookPage(): JSX.Element {
   };
 
   const handleDelete = () => {
+    // Require authentication to delete
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     if (selectedStrokeIds.length > 0) {
       deleteSelection(selectedStrokeIds);
       setSelectedStrokeIds([]);

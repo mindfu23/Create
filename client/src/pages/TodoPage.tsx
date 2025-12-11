@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useTodoStorage } from "@/hooks/useTodoStorage";
 import { useProjectStorage } from "@/hooks/useProjectStorage";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { DEFAULT_PROJECT_ID, DEFAULT_PROJECT_NAME, TodoStorageEntry } from "@/lib/todoStorage";
 import type { Project } from "@/lib/projectStorage";
 
@@ -15,17 +16,14 @@ export const TodoPage = (): JSX.Element => {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const { toast } = useToast();
+  const { user, isAuthenticated, requireAuth } = useAuth();
   
   // Parse URL params for return from project creation
   const urlParams = new URLSearchParams(searchString);
   const returnFromProject = urlParams.get('created');
   
-  // Get userId from localStorage
-  const [userId, setUserId] = useState<string | null>(null);
-  useEffect(() => {
-    const storedUserId = localStorage.getItem('create_user_id');
-    if (storedUserId) setUserId(storedUserId);
-  }, []);
+  // Get userId from auth
+  const userId = user?.id || null;
 
   // Todo storage hook
   const {
@@ -104,6 +102,12 @@ export const TodoPage = (): JSX.Element => {
 
   // Handle add todo
   const handleAddTodo = async () => {
+    // Require authentication to add todos
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     if (!newTaskText.trim()) return;
     
     const result = await addTodo(newTaskText, selectedProjectId);
@@ -114,6 +118,12 @@ export const TodoPage = (): JSX.Element => {
 
   // Handle toggle
   const handleToggle = async (id: string) => {
+    // Require authentication to toggle todos
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     await toggle(id);
   };
 
@@ -131,6 +141,12 @@ export const TodoPage = (): JSX.Element => {
   };
 
   const saveEdit = async (id: string) => {
+    // Require authentication to edit todos
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     if (editingText.trim()) {
       await updateText(id, editingText);
     }
@@ -160,6 +176,12 @@ export const TodoPage = (): JSX.Element => {
 
   // Handle project change
   const handleChangeProject = async (todoId: string, newProjectId: string) => {
+    // Require authentication to change project
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     await changeProject(todoId, newProjectId);
     setProjectMenuOpen(null);
   };
@@ -173,6 +195,12 @@ export const TodoPage = (): JSX.Element => {
 
   // Handle clear completed
   const handleClearCompleted = async () => {
+    // Require authentication to clear completed
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     const count = await clearCompleted();
     if (count > 0) {
       toast({

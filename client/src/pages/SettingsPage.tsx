@@ -4,25 +4,14 @@
  * User settings including cloud storage configuration
  */
 
-import { ArrowLeft, Settings, User, Cloud, Bell, Shield, LogOut } from "lucide-react";
+import { ArrowLeft, Settings, Cloud, HardDrive } from "lucide-react";
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CloudStorageSettings } from "@/components/CloudStorageSettings";
 import { useToast } from "@/hooks/use-toast";
-
-// For now, we'll use a simple local storage approach for user ID
-// In production, this would come from your auth system
-const getUserId = (): string => {
-  let userId = localStorage.getItem('createcamp_user_id');
-  if (!userId) {
-    userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('createcamp_user_id', userId);
-  }
-  return userId;
-};
+import { useAuth } from "@/contexts/AuthContext";
 
 // Check if user has premium (for now, check localStorage or default to dev mode)
 const checkPremiumStatus = (): boolean => {
@@ -38,10 +27,10 @@ const checkPremiumStatus = (): boolean => {
 export const SettingsPage = (): JSX.Element => {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, isAuthenticated, requireAuth } = useAuth();
   
-  const [userId] = useState(getUserId);
+  const userId = user?.id || 'anonymous';
   const [isPremium] = useState(checkPremiumStatus);
-  const [activeTab, setActiveTab] = useState("cloud");
 
   // Enable dev mode for testing
   const toggleDevMode = () => {
@@ -61,96 +50,101 @@ export const SettingsPage = (): JSX.Element => {
   return (
     <div className="bg-black w-full min-w-[375px] min-h-screen flex flex-col">
       {/* Header */}
-      <header className="w-full h-[78px] bg-[#f3c053] flex items-center justify-center relative">
-        <button
-          onClick={() => setLocation("/")}
-          className="absolute left-[14px] top-1/2 -translate-y-1/2"
-        >
+      <header className="w-full h-[60px] bg-[#f3c053] flex items-center px-4 gap-4">
+        <button onClick={() => setLocation("/")} className="p-1">
           <ArrowLeft className="w-6 h-6 text-black" />
         </button>
-        <h1 className="[font-family:'Dangrek',Helvetica] font-normal text-black text-3xl text-center tracking-[0] leading-[normal]">
+        <h1 className="[font-family:'Dangrek',Helvetica] font-normal text-black text-2xl">
           Settings
         </h1>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col px-4 pt-6 pb-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="cloud" className="flex items-center gap-2">
-              <Cloud className="h-4 w-4" />
-              Cloud Sync
-            </TabsTrigger>
-            <TabsTrigger value="account" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Account
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Cloud Storage Tab */}
-          <TabsContent value="cloud" className="space-y-4">
+      <main className="flex-1 flex flex-col px-4 pt-6 pb-8 space-y-6">
+        {/* Cloud Storage Section */}
+        <section>
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Cloud className="w-5 h-5" />
+            Cloud Storage
+          </h2>
+          
+          {isAuthenticated ? (
             <CloudStorageSettings 
               userId={userId} 
               isPremiumUser={isPremium}
             />
-          </TabsContent>
-
-          {/* Account Tab */}
-          <TabsContent value="account" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Account Info
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">User ID</span>
-                  <code className="text-xs bg-muted px-2 py-1 rounded">
-                    {userId.slice(0, 20)}...
-                  </code>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Premium Status</span>
-                  <span className={isPremium ? "text-green-500" : "text-muted-foreground"}>
-                    {isPremium ? "Active" : "Free"}
-                  </span>
-                </div>
+          ) : (
+            <Card className="bg-gray-900 border-gray-800">
+              <CardContent className="p-6 text-center">
+                <Cloud className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">
+                  Sign in to enable Cloud Sync
+                </h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  Connect your Dropbox, Google Drive, or other cloud storage to backup your data automatically.
+                </p>
+                <Button
+                  className="bg-[#f3c053] text-black hover:bg-[#e5b347]"
+                  onClick={() => requireAuth()}
+                >
+                  Sign In
+                </Button>
               </CardContent>
             </Card>
+          )}
+        </section>
 
-            {/* Dev Mode Toggle (for testing) */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Developer Options
-                </CardTitle>
-                <CardDescription>
-                  Options for testing and development
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">Dev Mode</p>
-                    <p className="text-sm text-muted-foreground">
-                      Enable premium features for testing
-                    </p>
-                  </div>
-                  <Button 
-                    variant={localStorage.getItem('createcamp_dev_mode') === 'true' ? "destructive" : "default"}
-                    size="sm"
-                    onClick={toggleDevMode}
-                  >
-                    {localStorage.getItem('createcamp_dev_mode') === 'true' ? 'Disable' : 'Enable'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {/* Local Storage Section */}
+        <section>
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <HardDrive className="w-5 h-5" />
+            Local Storage
+          </h2>
+          
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-400">Data stored locally in browser</span>
+                <span className="text-green-500">Active</span>
+              </div>
+              <p className="text-xs text-gray-500">
+                Your journal entries, projects, sketches, and to-dos are saved locally in IndexedDB. 
+                This data persists even when offline but is only available on this device.
+              </p>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Developer Options */}
+        <section>
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Developer Options
+          </h2>
+          
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base text-white">Dev Mode</CardTitle>
+              <CardDescription>
+                Enable premium features for testing
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-400">
+                  {localStorage.getItem('createcamp_dev_mode') === 'true' ? 'Enabled' : 'Disabled'}
+                </span>
+                <Button 
+                  variant={localStorage.getItem('createcamp_dev_mode') === 'true' ? "destructive" : "secondary"}
+                  size="sm"
+                  onClick={toggleDevMode}
+                >
+                  {localStorage.getItem('createcamp_dev_mode') === 'true' ? 'Disable' : 'Enable'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
       </main>
     </div>
   );

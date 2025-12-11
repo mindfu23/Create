@@ -5,28 +5,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useProjectStorage } from "@/hooks/useProjectStorage";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Project } from "@/lib/projectStorage";
 
 export const ProjectsPage = (): JSX.Element => {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const { toast } = useToast();
+  const { user, isAuthenticated, requireAuth } = useAuth();
   
   // Parse URL params for special navigation
   const urlParams = new URLSearchParams(searchString);
   const createNewParam = urlParams.get('createNew');
   const returnTo = urlParams.get('returnTo');
   
-  // Get userId from localStorage (shared with journal)
-  const [userId, setUserId] = useState<string | null>(null);
-  
-  useEffect(() => {
-    // Try to get userId from localStorage
-    const storedUserId = localStorage.getItem('create_user_id');
-    if (storedUserId) {
-      setUserId(storedUserId);
-    }
-  }, []);
+  // Get userId from auth context
+  const userId = user?.id || null;
 
   // Storage hook
   const {
@@ -50,10 +44,6 @@ export const ProjectsPage = (): JSX.Element => {
   const [newTaskText, setNewTaskText] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", description: "" });
-
-  // User setup form
-  const [showUserSetup, setShowUserSetup] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
   
   // Auto-open create form if createNew param is present
   useEffect(() => {
@@ -74,27 +64,14 @@ export const ProjectsPage = (): JSX.Element => {
     }
   }, [projects, selectedProject?.id]);
 
-  // Handle user setup
-  const handleUserSetup = () => {
-    if (!userEmail) {
-      toast({
-        title: "Email Required",
-        description: "Please enter your email for syncing",
-        variant: "destructive",
-      });
-      return;
-    }
-    localStorage.setItem('create_user_id', userEmail);
-    setUserId(userEmail);
-    setShowUserSetup(false);
-    toast({
-      title: "Sync Enabled",
-      description: "Your projects will now sync across devices",
-    });
-  };
-
   // Handle create project
   const handleCreateProject = async () => {
+    // Require authentication to save
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     if (!newProject.name) {
       toast({
         title: "Name Required",
@@ -127,6 +104,12 @@ export const ProjectsPage = (): JSX.Element => {
 
   // Handle update project
   const handleUpdateProject = async () => {
+    // Require authentication to update
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     if (!selectedProject || !editForm.name) return;
 
     const result = await updateProject(selectedProject.id, {
@@ -145,6 +128,12 @@ export const ProjectsPage = (): JSX.Element => {
 
   // Handle delete project
   const handleDeleteProject = async (id: string) => {
+    // Require authentication to delete
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     const success = await removeProject(id);
     if (success) {
       toast({
@@ -157,6 +146,12 @@ export const ProjectsPage = (): JSX.Element => {
 
   // Handle add task
   const handleAddTask = async () => {
+    // Require authentication to add tasks
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     if (!selectedProject || !newTaskText.trim()) return;
 
     const success = await addTask(selectedProject.id, newTaskText);
@@ -167,20 +162,32 @@ export const ProjectsPage = (): JSX.Element => {
 
   // Handle toggle task
   const handleToggleTask = async (taskId: string) => {
+    // Require authentication to toggle tasks
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     if (!selectedProject) return;
     await toggleTask(selectedProject.id, taskId);
   };
 
   // Handle delete task
   const handleDeleteTask = async (taskId: string) => {
+    // Require authentication to delete tasks
+    if (!isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
     if (!selectedProject) return;
     await deleteTask(selectedProject.id, taskId);
   };
 
   // Handle manual sync
   const handleSync = async () => {
-    if (!userId) {
-      setShowUserSetup(true);
+    if (!isAuthenticated) {
+      requireAuth();
       return;
     }
     
@@ -205,59 +212,6 @@ export const ProjectsPage = (): JSX.Element => {
       <div className="bg-black w-full min-w-[375px] min-h-screen flex flex-col items-center justify-center">
         <RefreshCw className="w-12 h-12 text-[#93b747] animate-spin" />
         <p className="text-white mt-4">Loading projects...</p>
-      </div>
-    );
-  }
-
-  // User setup modal
-  if (showUserSetup) {
-    return (
-      <div className="bg-black w-full min-w-[375px] min-h-screen flex flex-col">
-        <header className="w-full h-[78px] bg-[#f3c053] flex items-center justify-center relative">
-          <button
-            onClick={() => setShowUserSetup(false)}
-            className="absolute left-4 top-1/2 -translate-y-1/2"
-          >
-            <ArrowLeft className="w-6 h-6 text-black" />
-          </button>
-          <h1 className="[font-family:'Dangrek',Helvetica] font-normal text-black text-4xl text-center tracking-[0] leading-[normal]">
-            Sync Setup
-          </h1>
-        </header>
-
-        <main className="flex-1 flex flex-col items-center justify-center px-4 gap-6">
-          <Cloud className="w-16 h-16 text-[#93b747]" />
-          <h2 className="text-white text-2xl [font-family:'Dangrek',Helvetica]">
-            Enable Cloud Sync
-          </h2>
-          <p className="text-gray-400 text-center max-w-xs">
-            Enter your email to sync projects across devices
-          </p>
-
-          <Card className="bg-white rounded-[15px] border-0 w-full max-w-sm">
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Email</label>
-                  <input
-                    type="email"
-                    placeholder="your@email.com"
-                    value={userEmail}
-                    onChange={(e) => setUserEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleUserSetup()}
-                    className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-[#93b747]"
-                  />
-                </div>
-                <Button
-                  onClick={handleUserSetup}
-                  className="w-full bg-[#93b747] hover:bg-[#7a9a3a] h-12"
-                >
-                  Enable Sync
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </main>
       </div>
     );
   }
