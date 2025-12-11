@@ -1,11 +1,12 @@
 /**
- * Auth Modal Component
+ * Reusable Auth Modal Component
  * 
- * Login and signup modal that can be triggered from anywhere in the app.
+ * A configurable login/signup modal that works with the AuthContext.
+ * Customize appearance via AuthModalConfig.
  */
 
 import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from './AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,43 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 
-export function AuthModal(): JSX.Element {
+export interface AuthModalConfig {
+  /** Title for login mode (default: 'Welcome Back!') */
+  loginTitle?: string;
+  /** Title for signup mode (default: 'Create Account') */
+  signupTitle?: string;
+  /** Description for login mode */
+  loginDescription?: string;
+  /** Description for signup mode */
+  signupDescription?: string;
+  /** Primary button color (default: '#f3c053') */
+  primaryColor?: string;
+  /** Primary button hover color (default: '#e5b347') */
+  primaryHoverColor?: string;
+  /** Primary button text color (default: 'black') */
+  primaryTextColor?: string;
+  /** Minimum password length (default: 8) */
+  minPasswordLength?: number;
+}
+
+const DEFAULT_MODAL_CONFIG: Required<AuthModalConfig> = {
+  loginTitle: 'Welcome Back!',
+  signupTitle: 'Create Account',
+  loginDescription: 'Sign in to save your work and sync across devices',
+  signupDescription: 'Sign up to save and sync your data',
+  primaryColor: '#f3c053',
+  primaryHoverColor: '#e5b347',
+  primaryTextColor: 'black',
+  minPasswordLength: 8,
+};
+
+interface AuthModalProps {
+  config?: AuthModalConfig;
+}
+
+export function AuthModal({ config: userConfig }: AuthModalProps = {}): JSX.Element {
+  const modalConfig = { ...DEFAULT_MODAL_CONFIG, ...userConfig };
+  
   const {
     showAuthModal,
     setShowAuthModal,
@@ -53,8 +90,8 @@ export function AuthModal(): JSX.Element {
         setError('Passwords do not match');
         return;
       }
-      if (password.length < 8) {
-        setError('Password must be at least 8 characters');
+      if (password.length < modalConfig.minPasswordLength) {
+        setError(`Password must be at least ${modalConfig.minPasswordLength} characters`);
         return;
       }
       if (!displayName.trim()) {
@@ -74,10 +111,7 @@ export function AuthModal(): JSX.Element {
         setError(result.error || 'An error occurred');
       } else {
         // Clear form on success
-        setEmail('');
-        setPassword('');
-        setConfirmPassword('');
-        setDisplayName('');
+        clearForm();
       }
     } finally {
       setIsSubmitting(false);
@@ -89,13 +123,22 @@ export function AuthModal(): JSX.Element {
     setError('');
   };
 
-  const handleClose = () => {
-    setShowAuthModal(false);
-    setError('');
+  const clearForm = () => {
     setEmail('');
     setPassword('');
     setConfirmPassword('');
     setDisplayName('');
+    setError('');
+  };
+
+  const handleClose = () => {
+    setShowAuthModal(false);
+    clearForm();
+  };
+
+  const buttonStyle = {
+    backgroundColor: modalConfig.primaryColor,
+    color: modalConfig.primaryTextColor,
   };
 
   return (
@@ -103,12 +146,10 @@ export function AuthModal(): JSX.Element {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center">
-            {isLogin ? 'Welcome Back!' : 'Create Account'}
+            {isLogin ? modalConfig.loginTitle : modalConfig.signupTitle}
           </DialogTitle>
           <DialogDescription className="text-center">
-            {isLogin
-              ? 'Sign in to save your work and sync across devices'
-              : 'Sign up to save your journal, projects, and sketches'}
+            {isLogin ? modalConfig.loginDescription : modalConfig.signupDescription}
           </DialogDescription>
         </DialogHeader>
 
@@ -146,7 +187,7 @@ export function AuthModal(): JSX.Element {
               <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder={isLogin ? 'Your password' : 'At least 8 characters'}
+                placeholder={isLogin ? 'Your password' : `At least ${modalConfig.minPasswordLength} characters`}
                 value={password}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 disabled={isSubmitting}
@@ -185,7 +226,8 @@ export function AuthModal(): JSX.Element {
 
           <Button
             type="submit"
-            className="w-full bg-[#f3c053] text-black hover:bg-[#e5b347]"
+            className="w-full"
+            style={buttonStyle}
             disabled={isSubmitting}
           >
             {isSubmitting ? (
@@ -198,17 +240,32 @@ export function AuthModal(): JSX.Element {
             )}
           </Button>
 
-          <div className="text-center text-sm">
-            <span className="text-gray-600">
-              {isLogin ? "Don't have an account? " : 'Already have an account? '}
-            </span>
-            <button
-              type="button"
-              onClick={switchMode}
-              className="text-[#93b747] hover:underline font-medium"
-            >
-              {isLogin ? 'Sign up' : 'Sign in'}
-            </button>
+          <div className="text-center text-sm text-gray-600">
+            {isLogin ? (
+              <>
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={switchMode}
+                  className="font-semibold hover:underline"
+                  style={{ color: modalConfig.primaryColor }}
+                >
+                  Sign up
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={switchMode}
+                  className="font-semibold hover:underline"
+                  style={{ color: modalConfig.primaryColor }}
+                >
+                  Sign in
+                </button>
+              </>
+            )}
           </div>
         </form>
       </DialogContent>
