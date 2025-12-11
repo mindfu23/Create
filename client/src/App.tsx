@@ -13,6 +13,7 @@ import { CompletedTasksPage } from "@/pages/CompletedTasksPage";
 import { SharePage } from "@/pages/SharePage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { OAuthCallbackPage } from "@/pages/OAuthCallbackPage";
+import { SketchbookPage } from "@/pages/SketchbookPage";
 
 function Router() {
   return (
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/completed-tasks" component={CompletedTasksPage} />
       <Route path="/share" component={SharePage} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/sketchbook" component={SketchbookPage} />
       <Route path="/auth/callback" component={OAuthCallbackPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
