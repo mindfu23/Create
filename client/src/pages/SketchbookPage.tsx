@@ -130,12 +130,27 @@ export function SketchbookPage(): JSX.Element {
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Create new sketchbook on first load if none exists
+  // Auto-create default sketchbook on first load if none exists
   useEffect(() => {
-    if (!sketchbook && !isLoading) {
-      setShowNewDialog(true);
-    }
-  }, [sketchbook, isLoading]);
+    const initDefaultSketchbook = async () => {
+      if (!sketchbook && !isLoading) {
+        // Check if any sketchbooks exist
+        const existing = await loadAll();
+        if (existing.length === 0) {
+          // Create default sketchbook automatically
+          await createNew('My Sketchbook');
+          toast({ title: 'Welcome!', description: 'Your sketchbook is ready' });
+        } else {
+          // Load the most recently updated sketchbook
+          const mostRecent = existing.sort((a, b) => 
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          )[0];
+          await load(mostRecent.id);
+        }
+      }
+    };
+    initDefaultSketchbook();
+  }, [sketchbook, isLoading, loadAll, createNew, load, toast]);
 
   // Keyboard shortcuts
   useEffect(() => {

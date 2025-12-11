@@ -1,9 +1,19 @@
-import { MenuIcon, X } from "lucide-react";
+import { MenuIcon, X, Pencil } from "lucide-react";
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 
-const sections = [
+interface Section {
+  label: string;
+  path: string;
+  image: string;
+  imageAlt: string;
+  imageClass: string;
+  containerClass: string;
+  fallbackIcon?: boolean;
+}
+
+const sections: Section[] = [
   {
     label: "Journal",
     path: "/journal",
@@ -20,6 +30,15 @@ const sections = [
     imageAlt: "Bullseye",
     imageClass: "w-[136px] h-[136px]",
     containerClass: "mt-[81px] ml-[13px]",
+  },
+  {
+    label: "Sketchbook",
+    path: "/sketchbook",
+    image: "",
+    imageAlt: "Sketchbook",
+    imageClass: "w-[120px] h-[120px]",
+    containerClass: "mt-[81px] ml-[13px]",
+    fallbackIcon: true,
   },
 ];
 
@@ -108,11 +127,15 @@ export const CreatecampHome = (): JSX.Element => {
                 className="w-full h-[299px] bg-white rounded-[15px] border-0 cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all"
               >
                 <CardContent className="p-0 flex items-center justify-center h-full">
-                  <img
-                    className={`${section.imageClass} object-cover ${section.containerClass}`}
-                    alt={section.imageAlt}
-                    src={section.image}
-                  />
+                  {section.fallbackIcon ? (
+                    <Pencil className="w-24 h-24 text-gray-600" />
+                  ) : (
+                    <img
+                      className={`${section.imageClass} object-cover ${section.containerClass}`}
+                      alt={section.imageAlt}
+                      src={section.image}
+                    />
+                  )}
                 </CardContent>
               </Card>
             </div>
