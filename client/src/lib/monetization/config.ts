@@ -103,21 +103,45 @@ export const TIER_FEATURES: Record<SubscriptionTier, string[]> = {
   free: [
     'Basic journal entries',
     'Basic project tracking',
-    'Local storage',
+    'Local storage only',
     'Ads displayed',
   ],
   premium: [
     'Everything in Free',
     'No ads',
-    'Cloud sync',
+    'Cloud sync (Dropbox, Google Drive, OneDrive, Box)',
+    'WebDAV & SFTP support',
     'Unlimited entries',
+    'Automatic background sync',
+    'Offline mode with auto-sync',
   ],
   premium_plus: [
     'Everything in Premium',
     'Priority support',
     'Early access to features',
     'Custom themes',
+    'Advanced conflict resolution',
   ],
+};
+
+// ============================================================================
+// CLOUD STORAGE PREMIUM GATE
+// ============================================================================
+/**
+ * Check if cloud storage should be available for a user.
+ * Set requirePremium to false during development/testing.
+ */
+export const CLOUD_STORAGE_PREMIUM_CONFIG = {
+  // Set to false for testing, true for production
+  requirePremium: false,
+  
+  // Feature flags for development
+  devMode: {
+    // Enable all providers regardless of OAuth setup
+    enableAllProviders: true,
+    // Log all cloud storage operations
+    verboseLogging: true,
+  },
 };
 
 // ============================================================================

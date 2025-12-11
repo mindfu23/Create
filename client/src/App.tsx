@@ -11,6 +11,8 @@ import { ProjectsPage } from "@/pages/ProjectsPage";
 import { TodoPage } from "@/pages/TodoPage";
 import { CompletedTasksPage } from "@/pages/CompletedTasksPage";
 import { SharePage } from "@/pages/SharePage";
+import { SettingsPage } from "@/pages/SettingsPage";
+import { OAuthCallbackPage } from "@/pages/OAuthCallbackPage";
 
 function Router() {
   return (
@@ -22,6 +24,8 @@ function Router() {
       <Route path="/todo" component={TodoPage} />
       <Route path="/completed-tasks" component={CompletedTasksPage} />
       <Route path="/share" component={SharePage} />
+      <Route path="/settings" component={SettingsPage} />
+      <Route path="/auth/callback" component={OAuthCallbackPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>

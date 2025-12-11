@@ -1,14 +1,37 @@
-import { ArrowLeft, Plus, Save, Lock, Unlock, RefreshCw, Trash2, AlertTriangle, Cloud, CloudOff } from "lucide-react";
+import { ArrowLeft, Plus, Save, Lock, Unlock, RefreshCw, Trash2, AlertTriangle, Cloud, CloudOff, Settings } from "lucide-react";
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useJournalStorage } from "@/hooks/useJournalStorage";
+import { useCloudJournalSync } from "@/hooks/useCloudJournalSync";
 import { useToast } from "@/hooks/use-toast";
+
+// Helper to get user ID from localStorage
+const getUserId = (): string => {
+  let userId = localStorage.getItem('createcamp_user_id');
+  if (!userId) {
+    userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('createcamp_user_id', userId);
+  }
+  return userId;
+};
+
+// Check premium status
+const checkPremiumStatus = (): boolean => {
+  const devMode = localStorage.getItem('createcamp_dev_mode');
+  if (devMode === 'true') return true;
+  const premium = localStorage.getItem('createcamp_premium');
+  return premium === 'true';
+};
 
 export const JournalPage = (): JSX.Element => {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // User info
+  const [userId] = useState(getUserId);
+  const [isPremium] = useState(checkPremiumStatus);
   
   // Storage hook
   const {
@@ -35,6 +58,21 @@ export const JournalPage = (): JSX.Element => {
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [isSettingUp, setIsSettingUp] = useState(false);
+
+  // Cloud sync hook (for premium users)
+  const {
+    isCloudEnabled,
+    hasActiveConnection,
+    cloudSyncStatus,
+    pendingUploads,
+    syncToCloud,
+  } = useCloudJournalSync({
+    userId,
+    isPremiumUser: isPremium,
+    entries,
+    encryptionKey: isUnlocked ? password : null,
+    enabled: isUnlocked,
+  });
 
   // Handle unlock/setup
   const handleUnlock = async () => {
@@ -234,11 +272,36 @@ export const JournalPage = (): JSX.Element => {
           Journal
         </h1>
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
+          {/* Cloud storage indicator */}
+          {isCloudEnabled && hasActiveConnection && (
+            <button
+              onClick={() => syncToCloud()}
+              disabled={cloudSyncStatus === 'syncing'}
+              className="p-1"
+              title={`Cloud backup ${cloudSyncStatus === 'syncing' ? '(syncing...)' : pendingUploads > 0 ? `(${pendingUploads} pending)` : '(connected)'}`}
+            >
+              {cloudSyncStatus === 'syncing' ? (
+                <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+              ) : cloudSyncStatus === 'error' ? (
+                <CloudOff className="w-5 h-5 text-red-600" />
+              ) : (
+                <Cloud className="w-5 h-5 text-blue-600" />
+              )}
+            </button>
+          )}
+          {/* Settings shortcut */}
+          <button
+            onClick={() => setLocation("/settings")}
+            className="p-1"
+            title="Settings"
+          >
+            <Settings className="w-5 h-5 text-black" />
+          </button>
           <button
             onClick={handleSync}
             disabled={syncStatus.isSyncing}
             className="p-1"
-            title="Sync with cloud"
+            title="Sync with server"
           >
             {syncStatus.isSyncing ? (
               <RefreshCw className="w-5 h-5 text-black animate-spin" />
@@ -256,6 +319,13 @@ export const JournalPage = (): JSX.Element => {
           </button>
         </div>
       </header>
+
+      {/* Cloud sync status bar */}
+      {isCloudEnabled && hasActiveConnection && pendingUploads > 0 && (
+        <div className="bg-blue-500 text-white text-sm px-4 py-1 text-center">
+          {pendingUploads} cloud backup{pendingUploads > 1 ? 's' : ''} pending
+        </div>
+      )}
 
       {/* Sync status bar */}
       {syncStatus.error && (
