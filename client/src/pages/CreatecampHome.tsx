@@ -21,7 +21,7 @@ const sections: Section[] = [
       "/figmaAssets/light-bulb-png-transparent-light-bulb-images-927547-1.png",
     imageAlt: "Light bulb png",
     imageClass: "w-[134px] h-[210px]",
-    containerClass: "mt-9 ml-5",
+    containerClass: "",
   },
   {
     label: "Projects",
@@ -29,7 +29,7 @@ const sections: Section[] = [
     image: "/figmaAssets/bullseye-586412-1.png",
     imageAlt: "Bullseye",
     imageClass: "w-[136px] h-[136px]",
-    containerClass: "mt-[81px] ml-[13px]",
+    containerClass: "",
   },
   {
     label: "Sketchbook",
@@ -37,8 +37,16 @@ const sections: Section[] = [
     image: "",
     imageAlt: "Sketchbook",
     imageClass: "w-[120px] h-[120px]",
-    containerClass: "mt-[81px] ml-[13px]",
+    containerClass: "",
     fallbackIcon: true,
+  },
+  {
+    label: "To Do",
+    path: "/todo",
+    image: "/figmaAssets/screen-shot-2021-04-27-at-11-49-1.png",
+    imageAlt: "To Do list",
+    imageClass: "w-[181px] h-[127px]",
+    containerClass: "",
   },
 ];
 
@@ -114,7 +122,7 @@ export const CreatecampHome = (): JSX.Element => {
       </header>
 
       <main className="flex-1 flex flex-col px-4 pt-[14px]">
-        <section className="grid grid-cols-2 gap-4 mb-8">
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 justify-items-center">
           {sections.map((section, index) => (
             <div key={index} className="flex flex-col items-center">
               <button
@@ -125,14 +133,14 @@ export const CreatecampHome = (): JSX.Element => {
               </button>
               <Card 
                 onClick={() => setLocation(section.path)}
-                className="w-full h-[299px] bg-white rounded-[15px] border-0 cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all"
+                className="w-[259px] h-[299px] bg-white rounded-[15px] border-0 cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all"
               >
                 <CardContent className="p-0 flex items-center justify-center h-full">
                   {section.fallbackIcon ? (
                     <Pencil className="w-24 h-24 text-gray-600" />
                   ) : (
                     <img
-                      className={`${section.imageClass} object-cover ${section.containerClass}`}
+                      className={`${section.imageClass} object-contain`}
                       alt={section.imageAlt}
                       src={section.image}
                     />
@@ -141,27 +149,6 @@ export const CreatecampHome = (): JSX.Element => {
               </Card>
             </div>
           ))}
-        </section>
-
-        <section className="flex flex-col items-center mb-8">
-          <button
-            onClick={() => setLocation("/todo")}
-            className="[font-family:'Dangrek',Helvetica] font-normal text-[#93b747] text-2xl tracking-[0] leading-[normal] mb-4 hover:text-[#a8cc52] transition-colors cursor-pointer"
-          >
-            To Do
-          </button>
-          <Card 
-            onClick={() => setLocation("/todo")}
-            className="w-[259px] h-40 bg-white rounded-[15px] border-0 cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all"
-          >
-            <CardContent className="p-4 flex items-center justify-center h-full">
-              <img
-                className="w-[181px] h-[127px] object-cover"
-                alt="Screen shot"
-                src="/figmaAssets/screen-shot-2021-04-27-at-11-49-1.png"
-              />
-            </CardContent>
-          </Card>
         </section>
 
         <section className="flex flex-col items-center pb-8">
