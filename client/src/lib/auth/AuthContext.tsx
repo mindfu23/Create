@@ -33,12 +33,14 @@ interface AuthState {
 export interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (email: string, password: string, displayName: string) => Promise<{ success: boolean; error?: string }>;
+  requestPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>;
+  resetPassword: (token: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   showAuthModal: boolean;
   setShowAuthModal: (show: boolean) => void;
-  authModalMode: 'login' | 'signup';
-  setAuthModalMode: (mode: 'login' | 'signup') => void;
+  authModalMode: 'login' | 'signup' | 'forgot-password';
+  setAuthModalMode: (mode: 'login' | 'signup' | 'forgot-password') => void;
   /** Call this to require auth before an action. Returns true if authenticated, shows modal if not. */
   requireAuth: (callback?: () => void) => boolean;
   /** The auth configuration */
@@ -64,7 +66,7 @@ export function AuthProvider({ children, config: userConfig }: AuthProviderProps
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup' | 'forgot-password'>('login');
   const [pendingCallback, setPendingCallback] = useState<(() => void) | null>(null);
 
   const isAuthenticated = !!user;
@@ -180,7 +182,41 @@ export function AuthProvider({ children, config: userConfig }: AuthProviderProps
       localStorage.removeItem(config.storageKey);
     }
   }, [config.apiBaseUrl, config.storageKey]);
+  const requestPasswordReset = useCallback(async (email: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/request-password-reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        return { success: true };
+      } else {
+        return { success: false, error: data.error || 'Failed to request password reset' };
+      }
+    } catch (error) {
+      return { success: false, error: 'Network error. Please try again.' };
+    }
+  }, [config.apiBaseUrl]);
 
+  const resetPassword = useCallback(async (token: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        return { success: true };
+      } else {
+        return { success: false, error: data.error || 'Failed to reset password' };
+      }
+    } catch (error) {
+      return { success: false, error: 'Network error. Please try again.' };
+    }
+  }, [config.apiBaseUrl]);
   const requireAuth = useCallback((callback?: () => void): boolean => {
     if (isAuthenticated) {
       return true;
@@ -200,6 +236,8 @@ export function AuthProvider({ children, config: userConfig }: AuthProviderProps
     isAuthenticated,
     login,
     signup,
+    requestPasswordReset,
+    resetPassword,
     logout,
     checkAuth,
     showAuthModal,

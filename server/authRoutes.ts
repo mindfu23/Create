@@ -47,6 +47,8 @@ export interface AuthStorage {
     password: string;
     displayName: string;
   }): Promise<AuthUser>;
+  /** Update user password */
+  updateUserPassword(userId: string, newPasswordHash: string): Promise<void>;
 }
 
 export interface AuthRoutesConfig {
@@ -67,6 +69,7 @@ export interface AuthRoutesConfig {
 // Simple in-memory session store
 // In production, replace with Redis, database, or other persistent store
 const sessions = new Map<string, { userId: string; expiresAt: Date }>();
+const resetTokens = new Map<string, { userId: string; expiresAt: Date }>();
 
 export function createAuthRoutes(config: AuthRoutesConfig): Router {
   const router = Router();
@@ -220,6 +223,63 @@ export function createAuthRoutes(config: AuthRoutesConfig): Router {
       res.json({ user: sanitizeUser(user) });
     } catch (error) {
       console.error('Login error:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  // POST /request-password-reset
+  router.post('/request-password-reset', async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (user) {
+        // Generate reset token
+        const token = randomUUID();
+        resetTokens.set(token, {
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 1000 * 60 * 60), // 1 hour
+        });
+
+        // In a real app, send email here
+        console.log(`[Auth] Password reset token for ${email}: ${token}`);
+      }
+
+      // Always return success to prevent email enumeration
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Password reset request error:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  // POST /reset-password
+  router.post('/reset-password', async (req: Request, res: Response) => {
+    try {
+      const { token, password } = req.body;
+      if (!token || !password) {
+        return res.status(400).json({ error: 'Token and password are required' });
+      }
+
+      if (password.length < minPasswordLength) {
+        return res.status(400).json({ error: `Password must be at least ${minPasswordLength} characters` });
+      }
+
+      const resetData = resetTokens.get(token);
+      if (!resetData || resetData.expiresAt < new Date()) {
+        return res.status(400).json({ error: 'Invalid or expired token' });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, bcryptRounds);
+      await storage.updateUserPassword(resetData.userId, hashedPassword);
+
+      resetTokens.delete(token);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Password reset error:', error);
       res.status(500).json({ error: 'Server error' });
     }
   });

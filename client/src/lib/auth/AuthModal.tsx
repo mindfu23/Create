@@ -63,6 +63,7 @@ export function AuthModal({ config: userConfig }: AuthModalProps = {}): JSX.Elem
     setAuthModalMode,
     login,
     signup,
+    requestPasswordReset,
   } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -72,20 +73,44 @@ export function AuthModal({ config: userConfig }: AuthModalProps = {}): JSX.Elem
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const isLogin = authModalMode === 'login';
+  const isSignup = authModalMode === 'signup';
+  const isForgotPassword = authModalMode === 'forgot-password';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
 
     // Validation
-    if (!email || !password) {
+    if (!email) {
+      setError('Please enter your email');
+      return;
+    }
+
+    if (isForgotPassword) {
+      setIsSubmitting(true);
+      try {
+        const result = await requestPasswordReset(email);
+        if (!result.success) {
+          setError(result.error || 'An error occurred');
+        } else {
+          setSuccessMessage('If an account exists with this email, you will receive a password reset link shortly.');
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (!password) {
       setError('Please fill in all required fields');
       return;
     }
 
-    if (!isLogin) {
+    if (isSignup) {
       if (password !== confirmPassword) {
         setError('Passwords do not match');
         return;
@@ -118,9 +143,10 @@ export function AuthModal({ config: userConfig }: AuthModalProps = {}): JSX.Elem
     }
   };
 
-  const switchMode = () => {
-    setAuthModalMode(isLogin ? 'signup' : 'login');
+  const switchMode = (mode: 'login' | 'signup' | 'forgot-password') => {
+    setAuthModalMode(mode);
     setError('');
+    setSuccessMessage('');
   };
 
   const clearForm = () => {
@@ -129,6 +155,7 @@ export function AuthModal({ config: userConfig }: AuthModalProps = {}): JSX.Elem
     setConfirmPassword('');
     setDisplayName('');
     setError('');
+    setSuccessMessage('');
   };
 
   const handleClose = () => {
@@ -146,15 +173,19 @@ export function AuthModal({ config: userConfig }: AuthModalProps = {}): JSX.Elem
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center">
-            {isLogin ? modalConfig.loginTitle : modalConfig.signupTitle}
+            {isLogin && modalConfig.loginTitle}
+            {isSignup && modalConfig.signupTitle}
+            {isForgotPassword && 'Reset Password'}
           </DialogTitle>
           <DialogDescription className="text-center">
-            {isLogin ? modalConfig.loginDescription : modalConfig.signupDescription}
+            {isLogin && modalConfig.loginDescription}
+            {isSignup && modalConfig.signupDescription}
+            {isForgotPassword && 'Enter your email to receive a reset link'}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          {!isLogin && (
+          {isSignup && (
             <div className="space-y-2">
               <Label htmlFor="displayName">Name</Label>
               <Input
@@ -181,8 +212,21 @@ export function AuthModal({ config: userConfig }: AuthModalProps = {}): JSX.Elem
             />
           </div>
 
+          {!isForgotPassword && (
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              {isLogin && (
+                <button
+                  type="button"
+                  onClick={() => switchMode('forgot-password')}
+                  className="text-xs hover:underline"
+                  style={{ color: modalConfig.primaryColor }}
+                >
+                  Forgot password?
+                </button>
+              )}
+            </div>
             <div className="relative">
               <Input
                 id="password"
@@ -202,8 +246,9 @@ export function AuthModal({ config: userConfig }: AuthModalProps = {}): JSX.Elem
               </button>
             </div>
           </div>
+          )}
 
-          {!isLogin && (
+          {isSignup && (
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <Input
@@ -224,6 +269,12 @@ export function AuthModal({ config: userConfig }: AuthModalProps = {}): JSX.Elem
             </div>
           )}
 
+          {successMessage && (
+            <div className="p-3 rounded-md bg-green-50 text-green-600 text-sm">
+              {successMessage}
+            </div>
+          )}
+
           <Button
             type="submit"
             className="w-full"
@@ -233,10 +284,10 @@ export function AuthModal({ config: userConfig }: AuthModalProps = {}): JSX.Elem
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isLogin ? 'Signing in...' : 'Creating account...'}
+                Processing...
               </>
             ) : (
-              isLogin ? 'Sign In' : 'Create Account'
+              isLogin ? 'Sign In' : isSignup ? 'Create Account' : 'Send Reset Link'
             )}
           </Button>
 
@@ -246,7 +297,7 @@ export function AuthModal({ config: userConfig }: AuthModalProps = {}): JSX.Elem
                 Don't have an account?{' '}
                 <button
                   type="button"
-                  onClick={switchMode}
+                  onClick={() => switchMode('signup')}
                   className="font-semibold hover:underline"
                   style={{ color: modalConfig.primaryColor }}
                 >
@@ -258,7 +309,7 @@ export function AuthModal({ config: userConfig }: AuthModalProps = {}): JSX.Elem
                 Already have an account?{' '}
                 <button
                   type="button"
-                  onClick={switchMode}
+                  onClick={() => switchMode('login')}
                   className="font-semibold hover:underline"
                   style={{ color: modalConfig.primaryColor }}
                 >
